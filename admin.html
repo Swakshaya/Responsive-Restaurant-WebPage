@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Admin - FusionBite</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        body { background-color: #f8f9fa; }
+        
+        .admin-page { padding: 4rem 0; min-height: 100vh; }
+        
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        .admin-title h1 {
+            font-size: 2rem;
+            color: var(--text-main);
+        }
+
+        /* Order Card Styling */
+        .admin-order-card {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px var(--shadow);
+            border: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: 1fr 250px;
+            gap: 2rem;
+            transition: transform 0.2s ease;
+        }
+
+        .admin-order-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .order-details h3 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .order-time {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .items-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 1rem;
+        }
+
+        .item-tag {
+            background: #fdf2f0;
+            color: var(--primary);
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Status Control Area */
+        .status-control {
+            background: #fafafa;
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .status-control label {
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .admin-select {
+            width: 100%;
+            padding: 0.8rem;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: white;
+            color: var(--text-main);
+            font-weight: 700;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .admin-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .total-badge {
+            margin-top: 1.5rem;
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        @media (max-width: 768px) {
+            .admin-order-card { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="index.html" class="logo">
+                <i class="fas fa-tools"></i>
+                <span>FusionBite Admin</span>
+            </a>
+            <div class="nav-right">
+                <button class="btn-secondary" onclick="location.reload()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="admin-page">
+        <div class="container">
+            <div class="admin-header">
+                <div class="admin-title">
+                    <h1>Live Incoming Orders</h1>
+                    <p>Update statuses to notify your customers in real-time</p>
+                </div>
+            </div>
+
+            <div id="adminOrdersList">
+                </div>
+        </div>
+    </main>
+
+    <script>
+        const statusOptions = ['Confirmed', 'Preparing', 'Out for Delivery', 'Delivered'];
+
+        function loadOrders() {
+            const container = document.getElementById('adminOrdersList');
+            const orders = JSON.parse(localStorage.getItem('fusionbite_orders')) || [];
+
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding: 5rem; background:white; border-radius:24px;">
+                        <i class="fas fa-inbox" style="font-size: 4rem; color:#eee; margin-bottom:1rem;"></i>
+                        <p>No orders currently in queue.</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = orders.map(order => `
+                <div class="admin-order-card">
+                    <div class="order-details">
+                        <span class="order-time">${order.date}</span>
+                        <h3>Order #${order.id}</h3>
+                        <div class="items-list">
+                            ${order.items.map(item => `
+                                <span class="item-tag">${item.name} x ${item.quantity}</span>
+                            `).join('')}
+                        </div>
+                        <div class="total-badge">Total Revenue: ₹${order.total}</div>
+                    </div>
+                    
+                    <div class="status-control">
+                        <label>Update Status</label>
+                        <select class="admin-select" 
+                                id="sel-${order.id}" 
+                                onchange="updateStatus(${order.id}, this.value)">
+                            ${statusOptions.map(opt => `
+                                <option value="${opt}" ${order.status === opt ? 'selected' : ''}>${opt}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStatus(orderId, newStatus) {
+            const orders = JSON.parse(localStorage.getItem('fusionbite_orders')) || [];
+            const index = orders.findIndex(o => o.id == orderId);
+
+            if (index !== -1) {
+                orders[index].status = newStatus;
+                // Important: This flag triggers the bell in app.js
+                orders[index].hasNotification = true; 
+                
+                localStorage.setItem('fusionbite_orders', JSON.stringify(orders));
+                
+                // Visual feedback for admin
+                const select = document.getElementById(`sel-${orderId}`);
+                select.style.borderColor = 'var(--success)';
+                setTimeout(() => select.style.borderColor = 'var(--border)', 1000);
+            }
+        }
+
+        // Auto-refresh when an order is placed in another tab
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'fusionbite_orders') loadOrders();
+        });
+
+        document.addEventListener('DOMContentLoaded', loadOrders);
+    </script>
+</body>
+</html>
